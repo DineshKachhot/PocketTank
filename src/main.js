@@ -16,16 +16,16 @@ const CONSTANTS = {
 };
 
 const WEAPONS = [
-  { id: 'standard', name: 'Standard Shell', damage: 40, radius: 40, color: '#fff' },
-  { id: 'big_shot', name: 'Big Shot', damage: 80, radius: 80, color: '#ffaa00', heavy: true },
-  { id: 'sniper', name: 'Sniper', damage: 120, radius: 15, color: '#ff0000', fast: true },
+  { id: 'standard', name: 'Standard Shell', damage: 30, radius: 40, color: '#fff' },
+  { id: 'big_shot', name: 'Big Shot', damage: 40, radius: 80, color: '#ffaa00', heavy: true },
+  { id: 'sniper', name: 'Sniper', damage: 50, radius: 20, color: '#ff0000', fast: true },
   { id: 'dirt_mover', name: 'Dirt Mover', damage: 10, radius: 120, color: '#8B4513', terrainOnly: true },
-  { id: 'nuke', name: 'Nuke', damage: 180, radius: 150, color: '#00ff00' },
-  { id: 'heal', name: 'Repair Kit', damage: -60, radius: 40, color: '#00ffff' },
-  { id: 'cluster', name: 'Cluster Bomb', damage: 30, radius: 30, color: '#ff00ff', cluster: true },
-  { id: 'bouncer', name: 'Leap Frog', damage: 50, radius: 40, color: '#88ff88', bounces: 1 },
-  { id: 'digger', name: 'Digger', damage: 60, radius: 30, color: '#aaaaaa', digs: true },
-  { id: 'volcano', name: 'Volcano', damage: 20, radius: 30, color: '#ff5500', volcano: true }
+  { id: 'nuke', name: 'Nuke', damage: 60, radius: 150, color: '#00ff00' },
+  { id: 'heal', name: 'Repair Kit', damage: -30, radius: 40, color: '#00ffff' },
+  { id: 'cluster', name: 'Cluster Bomb', damage: 10, radius: 30, color: '#ff00ff', cluster: true },
+  { id: 'bouncer', name: 'Leap Frog', damage: 35, radius: 40, color: '#88ff88', bounces: 1 },
+  { id: 'digger', name: 'Digger', damage: 30, radius: 30, color: '#aaaaaa', digs: true },
+  { id: 'volcano', name: 'Volcano', damage: 15, radius: 30, color: '#ff5500', volcano: true }
 ];
 
 // --- State Management ---
@@ -36,6 +36,9 @@ const state = {
   particles: [],
   terrain: [], // Array of Y values
   wind: 0,
+  winner: null,
+  turnCount: 0,
+  firstScorer: null,
   players: [
     {
       id: 0,
@@ -49,7 +52,8 @@ const state = {
       fuel: CONSTANTS.MAX_FUEL,
       width: CONSTANTS.TANK_WIDTH,
       height: CONSTANTS.TANK_HEIGHT,
-      weaponIndex: 0
+      weaponIndex: 0,
+      score: 0
     },
     {
       id: 1,
@@ -63,7 +67,8 @@ const state = {
       fuel: CONSTANTS.MAX_FUEL,
       width: CONSTANTS.TANK_WIDTH,
       height: CONSTANTS.TANK_HEIGHT,
-      weaponIndex: 0
+      weaponIndex: 0,
+      score: 0
     }
   ]
 };
@@ -179,6 +184,9 @@ function smoothTerrain() {
 function resetPlayers() {
   state.turn = 0;
   state.phase = 'AIMING';
+  state.winner = null;
+  state.turnCount = 0;
+  state.firstScorer = null;
   state.projectiles = [];
   state.particles = [];
 
@@ -187,12 +195,14 @@ function resetPlayers() {
   state.players[0].health = 100;
   state.players[0].fuel = CONSTANTS.MAX_FUEL;
   state.players[0].angle = 45;
+  state.players[0].score = 0;
 
   // P2
   state.players[1].x = CONSTANTS.CANVAS_WIDTH - 100;
   state.players[1].health = 100;
   state.players[1].fuel = CONSTANTS.MAX_FUEL;
   state.players[1].angle = 135;
+  state.players[1].score = 0;
 
   updatePlayerY(state.players[0]);
   updatePlayerY(state.players[1]);
@@ -480,10 +490,26 @@ function update() {
       }, 1000);
     }
   } else {
-    // If something is moving, cancel pending turn switch
     if (state.turnEndTimer && (state.projectiles.length > 0 || tanksMoving)) {
       clearTimeout(state.turnEndTimer);
       state.turnEndTimer = null;
+    }
+  }
+
+  // Winner Celebration
+  if (state.winner) {
+    for (let i = 0; i < 5; i++) {
+      state.particles.push({
+        x: Math.random() * CONSTANTS.CANVAS_WIDTH,
+        y: Math.random() * CONSTANTS.CANVAS_HEIGHT,
+        vx: (Math.random() - 0.5) * 10,
+        vy: (Math.random() - 0.5) * 10,
+        life: 2.0 + Math.random(),
+        decay: 0.01,
+        color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+        antiGravity: true,
+        size: Math.random() * 5 + 2
+      });
     }
   }
 }
@@ -610,6 +636,15 @@ function explode(projectile, x, y) {
         const effect = Math.floor(dmgFactor * weapon.damage);
         if (effect !== 0) {
           p.health = Math.max(0, Math.min(100, p.health - effect));
+
+          // Scoring Logic
+          if (p !== getCurrentPlayer()) { // Only score for hitting enemy
+            const points = effect;
+            getCurrentPlayer().score += points;
+            if (state.firstScorer === null && points > 0) {
+              state.firstScorer = getCurrentPlayer().id;
+            }
+          }
         }
       }
     });
@@ -621,6 +656,14 @@ function explode(projectile, x, y) {
 
 function nextTurn() {
   if (state.phase === 'GAMEOVER') return;
+
+  state.turnCount++;
+
+  // Check for max turns (10 total, 5 each)
+  if (state.turnCount >= 10) {
+    endGameByScore();
+    return;
+  }
 
   state.turn = (state.turn + 1) % 2;
   state.phase = 'AIMING';
@@ -643,10 +686,45 @@ function checkWin() {
 
   if (winner) {
     state.phase = 'GAMEOVER';
+    state.winner = winner;
     ui.winnerText.innerText = `${winner.name} Wins!`;
     ui.winnerText.style.color = winner.color;
     ui.gameOverModal.classList.remove('hidden');
   }
+}
+
+function endGameByScore() {
+  const p1 = state.players[0];
+  const p2 = state.players[1];
+  let winner = null;
+
+  if (p1.score > p2.score) {
+    winner = p1;
+  } else if (p2.score > p1.score) {
+    winner = p2;
+  } else {
+    // Tie breaker: First scorer wins
+    if (state.firstScorer !== null) {
+      winner = state.players.find(p => p.id === state.firstScorer);
+    } else {
+      // 0-0 Draw or exact tie with no first scorer (impossible if scores > 0)
+      // If 0-0, no winner? Or Draw?
+      // Let's just say Draw for now, or P1.
+      // User said "who ever score first". If no one scored, it's a draw.
+    }
+  }
+
+  state.phase = 'GAMEOVER';
+  state.winner = winner;
+
+  if (winner) {
+    ui.winnerText.innerText = `${winner.name} Wins! (Score)`;
+    ui.winnerText.style.color = winner.color;
+  } else {
+    ui.winnerText.innerText = `It's a Draw!`;
+    ui.winnerText.style.color = '#fff';
+  }
+  ui.gameOverModal.classList.remove('hidden');
 }
 
 // --- Rendering ---
@@ -754,11 +832,11 @@ function updateUI() {
   const current = getCurrentPlayer();
 
   ui.p1HealthBar.style.width = `${p1.health}%`;
-  ui.p1HealthText.innerText = `${p1.health}%`;
+  ui.p1HealthText.innerText = `${p1.health}% (Score: ${p1.score})`;
   ui.p2HealthBar.style.width = `${p2.health}%`;
-  ui.p2HealthText.innerText = `${p2.health}%`;
+  ui.p2HealthText.innerText = `${p2.health}% (Score: ${p2.score})`;
 
-  ui.turnIndicator.innerText = `${current.name}'s Turn`;
+  ui.turnIndicator.innerText = `${current.name}'s Turn (Shot ${Math.floor(state.turnCount / 2) + 1}/5)`;
   ui.turnIndicator.style.color = current.color;
   ui.turnIndicator.style.borderColor = current.color;
 
