@@ -5,7 +5,7 @@ const CONSTANTS = {
   CANVAS_WIDTH: window.innerWidth,
   CANVAS_HEIGHT: window.innerHeight,
   TERRAIN_POINTS: window.innerWidth, // 1 point per pixel width for simplicity
-  EXPLOSION_RADIUS: 60,
+  EXPLOSION_RADIUS: 70,
   TANK_WIDTH: 30,
   TANK_HEIGHT: 15,
   TURRET_LENGTH: 20,
