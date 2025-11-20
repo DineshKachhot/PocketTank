@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pocket Tank 2D</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="gameCanvas"></canvas>
+      
+      <!-- HUD Layer -->
+      <div id="ui-layer">
+        <div class="top-bar">
+          <div class="player-status p1">
+            <div class="name">Player 1</div>
+            <div class="health-track">
+              <div id="p1-health-bar" class="health-fill" style="width: 100%"></div>
+            </div>
+            <div class="health-text" id="p1-health-text">100%</div>
+          </div>
+          
+          <div id="turn-indicator" class="turn-display">Player 1's Turn</div>
+
+          <div class="player-status p2">
+            <div class="name">Player 2</div>
+            <div class="health-track">
+              <div id="p2-health-bar" class="health-fill" style="width: 100%"></div>
+            </div>
+            <div class="health-text" id="p2-health-text">100%</div>
+          </div>
+        </div>
+
+        <div class="bottom-controls">
+          <div class="control-panel">
+            <div class="control-row">
+              <div class="control-group">
+                <label>Angle</label>
+                <div class="input-wrapper">
+                  <button class="adjust-btn" id="angle-minus">-</button>
+                  <input type="number" id="angle-input" value="45" min="0" max="180">
+                  <button class="adjust-btn" id="angle-plus">+</button>
+                </div>
+              </div>
+              
+              <div class="control-group">
+                <label>Power</label>
+                <div class="input-wrapper">
+                  <button class="adjust-btn" id="power-minus">-</button>
+                  <input type="number" id="power-input" value="50" min="0" max="100">
+                  <button class="adjust-btn" id="power-plus">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-row">
+              <div class="control-group">
+                <label>Weapon</label>
+                <select id="weapon-select" class="weapon-select">
+                  <!-- Options populated by JS -->
+                </select>
+              </div>
+            </div>
+
+            <div class="control-row">
+              <div class="control-group">
+                 <label>Fuel: <span id="fuel-display">100</span></label>
+                 <div class="move-buttons">
+                   <button id="move-left">← Move Left</button>
+                   <button id="move-right">Move Right →</button>
+                 </div>
+              </div>
+              <button id="fire-btn" class="fire-button">FIRE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="modal hidden">
+          <div class="modal-content">
+            <h1 id="winner-text">Player 1 Wins!</h1>
+            <button id="restart-btn">Play Again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
