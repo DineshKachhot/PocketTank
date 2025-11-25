@@ -347,6 +347,7 @@ function fireProjectile() {
   // 180 -> vx-, vy0
   // 45 -> vx+, vy-
 
+
   const rads = (p.angle * Math.PI) / 180;
   const pvx = Math.cos(rads) * power; // if angle 135, cos is negative. Correct.
   const pvy = -Math.sin(rads) * power; // negative sin for Up
